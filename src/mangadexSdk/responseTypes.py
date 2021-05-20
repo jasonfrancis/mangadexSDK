@@ -1,6 +1,6 @@
-from src.mangadexSdk.mangaDex import MangaDexSdk
+from .mangaDex import MangaDexSdk
 from typing import List
-from src.mangadexSdk.serializable import Serializable, SerializableProperty
+from .serializable import Serializable, SerializableProperty
 from enum import Enum
 
 class Result(Enum):
@@ -77,9 +77,11 @@ class FeedResult(Serializable):
 
 #Tags
 class TagAttributes(Serializable):
-	def __init__(self, name:dict, version:int):
+	def __init__(self, name:dict, version:int, description:dict, group:str):
 		self.name = name
 		self.version = version
+		self.description = description
+		self.group = group
 		super().__init__([])
 class Tag(Serializable):
 	def __init__(self, id:str, type:str, attributes:TagAttributes):

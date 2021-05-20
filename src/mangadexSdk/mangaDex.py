@@ -1,8 +1,8 @@
 from datetime import datetime
 import json
 from typing import Any
-from src.mangadexSdk.serializable import Serializable, SerializableProperty
-import src.mangadexSdk.constants as constants
+from .serializable import Serializable, SerializableProperty
+from .constants import Constants
 from os import path
 import sys
 import keyring
@@ -34,22 +34,22 @@ class Settings(Serializable):
 
 	@staticmethod
 	def getSettings():
-		if(path.exists(constants.SETTINGS_FILE)):
-			print(f"{constants.SETTINGS_FILE} exists")
+		if(path.exists(Constants.SETTINGS_FILE)):
+			print(f"{Constants.SETTINGS_FILE} exists")
 			settings = Settings.readFromFile()
 			if(not settings.username):
 				print("Username not found in settings file.")
 				settings.setUsername()
 			return settings
 		else:
-			print(f"{constants.SETTINGS_FILE} does not exist")
+			print(f"{Constants.SETTINGS_FILE} does not exist")
 			settings = Settings()
 			settings.setUsername()
 			return settings
 	
 	def setUsername(self):
 		self.username = input("Enter your MangaDex username: ")
-		print(f"Saving username \"{self.username}\" to {constants.SETTINGS_FILE} ...")
+		print(f"Saving username \"{self.username}\" to {Constants.SETTINGS_FILE} ...")
 		self.writeToFile()
 		print("Done.")
 
@@ -60,12 +60,12 @@ class Settings(Serializable):
 
 	def writeToFile(self):
 		settingsJson = self.toJson()
-		with open(constants.SETTINGS_FILE, "w") as writer:
+		with open(Constants.SETTINGS_FILE, "w") as writer:
 			writer.write(settingsJson)
 	
 	@staticmethod
 	def readFromFile():
-		with open(constants.SETTINGS_FILE, "r") as reader:
+		with open(Constants.SETTINGS_FILE, "r") as reader:
 			settingsString = reader.read()
 			#settingsDict = json.loads(settingsString, object_hook=Settings.dafuq)
 			#return Settings(**settingsDict)
@@ -79,7 +79,7 @@ class Credentials:
 		
 		if("--update-password" in sys.argv):
 			self.deletePassword()
-		self.password = keyring.get_password(constants.SERVICE_ID, self.username)
+		self.password = keyring.get_password(Constants.SERVICE_ID, self.username)
 
 		if(not self.password):
 			print(f"Password for user \"{self.username}\" not found in the keyring.  Enter password.")
@@ -87,10 +87,10 @@ class Credentials:
 	
 	def setPassword(self):
 		self.password = getpass.getpass()
-		keyring.set_password(constants.SERVICE_ID, self.username, self.password)
+		keyring.set_password(Constants.SERVICE_ID, self.username, self.password)
 	
 	def deletePassword(self):
-		keyring.delete_password(constants.SERVICE_ID, self.username)
+		keyring.delete_password(Constants.SERVICE_ID, self.username)
 
 
 class MangaDexSdk:
@@ -100,7 +100,7 @@ class MangaDexSdk:
 		self.session = Session(self.settings, self.credentials)
 	@classmethod
 	def postJson(cls, path:str, content:Any) -> requests.Response:
-		url = f"{constants.BASE_URI}/{path}"
+		url = f"{Constants.BASE_URI}/{path}"
 		contentJson = contentJson = json.dumps(content)
 		resp = requests.post(url, contentJson)
 		if(resp.status_code != 200):
@@ -108,13 +108,13 @@ class MangaDexSdk:
 		return resp
 	@classmethod
 	def get(self, path:str):
-		url = f"{constants.BASE_URI}/{path}"
+		url = f"{Constants.BASE_URI}/{path}"
 		resp = requests.get(url)
 		if(resp.status_code != 200):
 			raise Exception(f"MangaDexApi.get from {url} failed. Status code {resp.status_code} - {resp.text}")
 		return resp
 	def getAuthenticated(self, path:str):
-		url = f"{constants.BASE_URI}/{path}"
+		url = f"{Constants.BASE_URI}/{path}"
 		headers = { "Authorization": f"Bearer {self.session.getBearerToken()}"}
 		resp = requests.get(url, headers=headers)
 		if(resp.status_code != 200):

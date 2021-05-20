@@ -2,8 +2,8 @@ from enum import Enum
 from requests.models import Response
 from typing import List
 from datetime import datetime
-from src.mangadexSdk.mangaDex import MangaDexSdk
-from src.mangadexSdk.responseTypes import AtHomeServer, AuthorListResult, AuthorResult, ChapterResult, FeedResult, MangaListResult, MangaResult
+from .mangaDex import MangaDexSdk
+from .responseTypes import AtHomeServer, AuthorListResult, AuthorResult, ChapterResult, FeedResult, MangaListResult, MangaResult
 
 class OrderValue(Enum):
 	asc = 1
