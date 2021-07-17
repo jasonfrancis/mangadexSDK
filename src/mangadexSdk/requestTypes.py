@@ -13,11 +13,23 @@ class Order:
 		self.volume = volume
 		self.chapter = chapter
 class ChapterOrder:
-	def __init__(self, createdAt:OrderValue=None, updatedAt:OrderValue=None, volume:OrderValue=None, chapter:OrderValue=None):
+	def __init__(self, createdAt:OrderValue=None, updatedAt:OrderValue=None, publishedAt:OrderValue=None, volume:OrderValue=None, chapter:OrderValue=None):
 		self.createdAt = createdAt
 		self.updatedAt = updatedAt
+		self.publishedAt = publishedAt
 		self.volume = volume
 		self.chapter = chapter
+	def toQueryString(self, prependAmpersand:bool=True):
+		params = []
+		result = "&" if prependAmpersand else ""
+
+		if(self.createdAt): params.append(f"order[createdAt]={self.createdAt.name}")
+		if(self.updatedAt): params.append(f"order[updatedAt]={self.updatedAt.name}")
+		if(self.publishedAt): params.append(f"order[publishAt]={self.publishedAt.name}")
+		if(self.volume): params.append(f"order[volume]={self.volume.name}")
+		if(self.chapter): params.append(f"order[chapter]={self.chapter.name}")
+		
+		return result + "&".join(params)
 
 class AndOr(Enum):
 	AND = 1
@@ -29,10 +41,12 @@ class BaseRequest:
 		#YYYY-MM-DDTHH:MM:S
 		return dt.strftime("%Y-%m-%dT%H:%M:%S")
 	@staticmethod
-	def queryArrayOfStrings(input:List[str]):
-		# The documentation is vague about how these "Array of strings" should look, this is a placeholder.
-		# return json.dumps(input)
-		return ""
+	def queryArrayOfStrings(input:List[str], paramName:str, prependAmpersand:bool=True):
+		result = "&" if prependAmpersand else ""
+		paramName = paramName if paramName.endswith("[]") else f"{paramName}[]"
+		params = []
+		for val in input : params.append(f"{paramName}={val}")
+		return result + "&".join(params)
 class RequestTypes:
 	class MangaRequest:
 		def __init__(self, mangaId:str):
@@ -77,18 +91,18 @@ class RequestTypes:
 		def getPath(self) -> str:
 			output = f"manga?limit={self.limit}&offset={self.offset}"
 			output += "" if not self.title else f"&title={self.title}"
-			output += "" if not self.authors else f"&authors={BaseRequest.queryArrayOfStrings(self.authors)}"
-			output += "" if not self.artists else f"&artists={BaseRequest.queryArrayOfStrings(self.artists)}"
+			output += "" if not self.authors else BaseRequest.queryArrayOfStrings(self.authors, "authors")
+			output += "" if not self.artists else BaseRequest.queryArrayOfStrings(self.artists, "artists")
 			output += "" if not self.year else f"&year={self.year}"
-			output += "" if not self.includedTags or not self.includedTagsMode else f"&includedTags={BaseRequest.queryArrayOfStrings(self.includedTags)}"
+			output += "" if not self.includedTags or not self.includedTagsMode else BaseRequest.queryArrayOfStrings(self.includedTags, "includedTags")
 			output += "" if not self.includedTags or not self.includedTagsMode else f"&includedTagsMode={self.includedTagsMode}"
-			output += "" if not self.excludedTags or not self.excludedTagsMode else f"&excludedTags={BaseRequest.queryArrayOfStrings(self.excludedTags)}"
+			output += "" if not self.excludedTags or not self.excludedTagsMode else BaseRequest.queryArrayOfStrings(self.excludedTags, "excludedTags")
 			output += "" if not self.excludedTags or not self.excludedTagsMode else f"&excludedTagsMode={self.excludedTagsMode}"
-			output += "" if not self.status else f"&status={BaseRequest.queryArrayOfStrings(self.status)}"
-			output += "" if not self.originalLanguage else f"&originalLanguage={BaseRequest.queryArrayOfStrings(self.originalLanguage)}"
-			output += "" if not self.publicationDemographic else f"&publicationDemographic={BaseRequest.queryArrayOfStrings(self.publicationDemographic)}"
-			output += "" if not self.ids else f"&ids={BaseRequest.queryArrayOfStrings(self.ids)}"
-			output += "" if not self.contentRating else f"&contentRating={BaseRequest.queryArrayOfStrings(self.contentRating)}"
+			output += "" if not self.status else BaseRequest.queryArrayOfStrings(self.status, "status")
+			output += "" if not self.originalLanguage else BaseRequest.queryArrayOfStrings(self.originalLanguage, "originalLanguage")
+			output += "" if not self.publicationDemographic else BaseRequest.queryArrayOfStrings(self.publicationDemographic, "publicationDemographic")
+			output += "" if not self.ids else BaseRequest.queryArrayOfStrings(self.ids, "ids")
+			output += "" if not self.contentRating else BaseRequest.queryArrayOfStrings(self.contentRating, "contentRating")
 			output += "" if not self.createdAtSince else f"&createdAtSince={BaseRequest.formatDatetime(self.createdAtSince)}"
 			output += "" if not self.updatedAtSince else f"&updatedAtSince={BaseRequest.formatDatetime(self.updatedAtSince)}"
 			# the documentation is too vague about what this string should look like
@@ -132,7 +146,7 @@ class RequestTypes:
 		def getPath(self):
 			output = f"chapter?limit={self.limit}&offset={self.offset}"
 			output += "" if not self.title else f"&title={self.title}"
-			output += "" if not self.groups else f"&groups={BaseRequest.queryArrayOfStrings(self.groups)}"
+			output += "" if not self.groups else BaseRequest.queryArrayOfStrings(self.groups, "groups")
 			output += "" if not self.uploader else f"&uploader={self.uploader}"
 			output += "" if not self.manga else f"&manga={self.manga}"
 			output += "" if not self.volume else f"&volumne={self.volume}"
@@ -170,14 +184,14 @@ class RequestTypes:
 			self.get = lambda : AuthorListResult.fromJson(self._get().text)
 		def getPath(self) -> str:
 			output = f"author?limit={self.limit}&offset={self.offset}"
-			output += "" if not self.ids else f"&ids={BaseRequest.queryArrayOfStrings(self.ids)}"
+			output += "" if not self.ids else BaseRequest.queryArrayOfStrings(self.ids, "ids")
 			output += "" if not self.name else f"&name={self.name}"
 			return output
 
 	class FeedRequest:
 		def __init__(self, path:str, limit:int = None, offset:int = None, locales:List[str] = None,
 					createdAtSince:datetime = None, updatedAtSince:datetime = None, publishAtSince:datetime = None,
-					order:Order = None):
+					order:ChapterOrder = None):
 			limit = 100 if limit == None else limit
 			if(limit < 1 or limit > 500):
 				raise Exception(f"FeedRequest limit must be between 1 and 500. {limit} provided.")
@@ -197,16 +211,16 @@ class RequestTypes:
 		def getPath(self) -> str:
 			output = f"{self.path}?limit={self.limit}"
 			output += "" if not self.offset else f"&offset={self.offset}"
-			output += "" if not self.locales else f"&locales={BaseRequest.queryArrayOfStrings(self.locales)}"
+			output += "" if not self.locales else BaseRequest.queryArrayOfStrings(self.locales, "translatedLanguage")
 			output += "" if not self.createdAtSince else f"&createdAtSince={BaseRequest.formatDatetime(self.createdAtSince)}"
 			output += "" if not self.updatedAtSince else f"&updatedAtSince={BaseRequest.formatDatetime(self.updatedAtSince)}"
 			output += "" if not self.publishAtSince else f"&publishAtSince={BaseRequest.formatDatetime(self.publishAtSince)}"
-			# the documentation is too vague about what this string should look like
-			# output += "" if not self.order else f"&order={json.dumps(self.order)}"
+			output += "" if not self.order else self.order.toQueryString()
+			
 			return output
 
 	class UserFollowsMangaFeed(FeedRequest):
-		def __init__(self, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:Order=None):
+		def __init__(self, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:ChapterOrder=None):
 			super().__init__("user/follows/manga/feed", limit=limit, offset=offset, locales=locales, createdAtSince=createdAtSince, updatedAtSince=updatedAtSince, publishAtSince=publishAtSince, order=order)
 			# User follows cannot use the anonymous get.
 			del self.get
@@ -216,10 +230,10 @@ class RequestTypes:
 		def get(self, api:MangaDexSdk) -> FeedResult:
 			return FeedResult.fromJson(self._get(api).text)
 	class MangaFeed(FeedRequest):
-		def __init__(self, mangaId:str, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:Order=None):
+		def __init__(self, mangaId:str, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:ChapterOrder=None):
 			super().__init__(f"manga/{mangaId}/feed", limit=limit, offset=offset, locales=locales, createdAtSince=createdAtSince, updatedAtSince=updatedAtSince, publishAtSince=publishAtSince, order=order)
 	class ListFeed(FeedRequest):
-		def __init__(self, listId:str, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:Order=None):
+		def __init__(self, listId:str, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:ChapterOrder=None):
 			super().__init__(f"list/{listId}/feed", limit=limit, offset=offset, locales=locales, createdAtSince=createdAtSince, updatedAtSince=updatedAtSince, publishAtSince=publishAtSince, order=order)
 
 	class AtHomeServer:
