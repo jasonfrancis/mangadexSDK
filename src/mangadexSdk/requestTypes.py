@@ -13,10 +13,10 @@ class Order:
 		self.volume = volume
 		self.chapter = chapter
 class ChapterOrder:
-	def __init__(self, createdAt:OrderValue=None, updatedAt:OrderValue=None, publishedAt:OrderValue=None, volume:OrderValue=None, chapter:OrderValue=None):
+	def __init__(self, createdAt:OrderValue=None, updatedAt:OrderValue=None, publishAt:OrderValue=None, volume:OrderValue=None, chapter:OrderValue=None):
 		self.createdAt = createdAt
 		self.updatedAt = updatedAt
-		self.publishedAt = publishedAt
+		self.publishAt = publishAt
 		self.volume = volume
 		self.chapter = chapter
 	def toQueryString(self, prependAmpersand:bool=True):
@@ -25,7 +25,7 @@ class ChapterOrder:
 
 		if(self.createdAt): params.append(f"order[createdAt]={self.createdAt.name}")
 		if(self.updatedAt): params.append(f"order[updatedAt]={self.updatedAt.name}")
-		if(self.publishedAt): params.append(f"order[publishAt]={self.publishedAt.name}")
+		if(self.publishAt): params.append(f"order[publishAt]={self.publishAt.name}")
 		if(self.volume): params.append(f"order[volume]={self.volume.name}")
 		if(self.chapter): params.append(f"order[chapter]={self.chapter.name}")
 		
