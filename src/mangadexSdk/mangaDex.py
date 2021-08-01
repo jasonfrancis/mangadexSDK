@@ -8,6 +8,7 @@ import sys
 import keyring
 import getpass
 import requests
+import jwt
 
 class TokenResponse(Serializable):
 	def __init__(self, session:str = None, refresh:str = None, tokensAssigned:float = None):
@@ -16,14 +17,18 @@ class TokenResponse(Serializable):
 		self.tokensAssigned = datetime.utcnow().timestamp() if tokensAssigned == None else tokensAssigned
 	def tokenExpired(self) -> bool:
 		#tokens expire after 15 minutes
-		fifteenMinutes = 60 * 15
-		assigned = datetime.fromtimestamp(self.tokensAssigned)
-		return (datetime.utcnow() - assigned).total_seconds() >= fifteenMinutes
+		decoded = jwt.decode(self.session, verify=False)
+		if("exp" not in decoded):
+			return True
+		expires = datetime.fromtimestamp(decoded["exp"])
+		return datetime.utcnow() >= expires
 	def refreshExpired(self) -> bool:
 		#refresh tokens expire after 4 hours
-		fourHours = 60 * 60 * 4
-		assigned = datetime.fromtimestamp(self.tokensAssigned)
-		return (datetime.utcnow() - assigned).total_seconds() >= fourHours
+		decoded = jwt.decode(self.refresh, verify=False)
+		if("exp" not in decoded):
+			return True
+		expires = datetime.fromtimestamp(decoded["exp"])
+		return datetime.utcnow() >= expires
 
 class Settings(Serializable):
 	def __init__(self, username:str = None, token:TokenResponse = None):
