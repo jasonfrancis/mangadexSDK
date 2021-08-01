@@ -102,7 +102,8 @@ class MangaDexSdk:
 	def postJson(cls, path:str, content:Any) -> requests.Response:
 		url = f"{Constants.BASE_URI}/{path}"
 		contentJson = contentJson = json.dumps(content)
-		resp = requests.post(url, contentJson)
+		headers = { "Content-Type": "application/json;charset=utf-8" }
+		resp = requests.post(url, contentJson, headers=headers)
 		if(resp.status_code != 200):
 			raise Exception(f"MangaDexApi.postJson to {url} failed. Status code {resp.status_code} - {resp.text}")
 		return resp
