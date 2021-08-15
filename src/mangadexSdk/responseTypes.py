@@ -23,7 +23,7 @@ class AtHomeServer(Serializable):
 
 # Chapter responses
 class ChapterAttributes(Serializable):
-	def __init__(self, volume:int, chapter:str, title:str, translatedLanguage:str, hash:str, data:List[str], dataSaver:List[str], publishAt:str, createdAt:str, updatedAt:str, version:int):
+	def __init__(self, volume:int, chapter:str, title:str, translatedLanguage:str, hash:str, data:List[str], dataSaver:List[str], publishAt:str, createdAt:str, updatedAt:str, version:int, **kwargs):
 		self.volume = volume
 		self.chapter = chapter
 		self.title = title
@@ -35,6 +35,7 @@ class ChapterAttributes(Serializable):
 		self.createdAt = createdAt
 		self.updatedAt = updatedAt
 		self.version = version
+		self.externalUrl = None if not "externalUrl" in kwargs else kwargs["externalUrl"]
 
 class Chapter(Serializable):
 	def __init__(self, id:str, type:str, attributes:ChapterAttributes):
