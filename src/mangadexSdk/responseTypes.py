@@ -47,7 +47,7 @@ class Chapter(Serializable):
 		self.attributes = attributes
 		self.relationships = relationships
 		# Instructions about how to deserialize attributes
-		super().__init__([SerializableProperty(ChapterAttributes, self.getAttributeName(self.attributes))])
+		super().__init__([SerializableProperty(ChapterAttributes, self.getAttributeName(self.attributes)), SerializableProperty(Relationship, self.getAttributeName(self.relationships))])
 	def getPageUrls(self, atHomeServer:AtHomeServer) -> dict:
 		if atHomeServer.chapterId != self.id:
 			raise Exception(f"Chapter.getPageUrls(): Attempting to set page urls for chapter {self.id}, but the provided atHomeServer is for chapter {atHomeServer.chapterId}")
