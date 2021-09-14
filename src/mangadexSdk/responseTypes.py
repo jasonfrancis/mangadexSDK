@@ -59,26 +59,21 @@ class Chapter(Serializable):
 		return output
 
 class ChapterResult(Serializable):
-	def __init__(self, result:Result, data:Chapter, relationships:List[Relationship], **kwargs):
+	def __init__(self, result:Result, data:Chapter, **kwargs):
 		self.result = result
 		self.data = data
-		self.relationships = relationships
 		# Instrutions to deserialize data and relationships correctly.
-		super().__init__([SerializableProperty(Chapter, self.getAttributeName(self.data)), SerializableProperty(Relationship, self.getAttributeName(self.relationships))])
-	def getMangaId(self):
-		for relationship in self.relationships:
-			if(relationship.type == "manga"):
-				return relationship.id
-		raise Exception(f"ChapterResult.getMangaId() could not find a relationship to a manga for chapter {self.data.id}")
+		super().__init__([SerializableProperty(Chapter, self.getAttributeName(self.data))])
 
 class FeedResult(Serializable):
-	def __init__(self, results:List[ChapterResult], limit:int, offset:int, total:int, **kwargs):
-		self.results = results
+	def __init__(self, data:List[Chapter], limit:int, offset:int, total:int, **kwargs):
+		self.data = data
 		self.limit = limit
 		self.offset = offset
 		self.total = total
+		self.result = getFromDict(kwargs, "result", Result.ok)
 		# Instructions about how to deserialize attributes
-		super().__init__([SerializableProperty(ChapterResult, self.getAttributeName(self.results))])
+		super().__init__([SerializableProperty(Chapter, self.getAttributeName(self.data))])
 
 #Tags
 class TagAttributes(Serializable):
