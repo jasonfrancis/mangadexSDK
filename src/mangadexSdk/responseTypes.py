@@ -15,25 +15,30 @@ class Relationship(Serializable):
 		self.id = id
 		self.type = type
 
+# chapter details from AtHome
+class AtHomeChapter(Serializable):
+	def __init__(self, **kwargs):
+		self.hash = getFromDict(kwargs, "hash")
+		self.data = getFromDict(kwargs, "data")
+		self.dataSaver = getFromDict(kwargs, "dataSaver")
+		super().__init__(serializableProperties=[])
 # At-Home/Server
 class AtHomeServer(Serializable):
 	def __init__(self, baseUrl:str, **kwargs):
 		self.baseUrl = baseUrl
 		self.chapterId = None
-		super().__init__([])
+		self.chapter = getFromDict(kwargs, "chapter", dict())
+		super().__init__([SerializableProperty(AtHomeChapter, self.getAttributeName(self.chapter))])
 	def setChapterId(self, value:str):
 		self.chapterId = value
 
 # Chapter responses
 class ChapterAttributes(Serializable):
-	def __init__(self, volume:int, chapter:str, title:str, translatedLanguage:str, hash:str, data:List[str], dataSaver:List[str], publishAt:str, createdAt:str, updatedAt:str, version:int, **kwargs):
+	def __init__(self, volume:int, chapter:str, title:str, translatedLanguage:str, publishAt:str, createdAt:str, updatedAt:str, version:int, **kwargs):
 		self.volume = volume
 		self.chapter = chapter
 		self.title = title
 		self.translatedLanguage = translatedLanguage
-		self.hash = hash
-		self.data = data
-		self.dataSaver = dataSaver
 		self.publishAt = publishAt
 		self.createdAt = createdAt
 		self.updatedAt = updatedAt
@@ -52,10 +57,10 @@ class Chapter(Serializable):
 		if atHomeServer.chapterId != self.id:
 			raise Exception(f"Chapter.getPageUrls(): Attempting to set page urls for chapter {self.id}, but the provided atHomeServer is for chapter {atHomeServer.chapterId}")
 		output = { "data": [], "dataSaver": [] }
-		for page in self.attributes.data:
-			output["data"].append(f"{atHomeServer.baseUrl}/data/{self.attributes.hash}/{page}")
-		for page in self.attributes.dataSaver:
-			output["dataSaver"].append(f"{atHomeServer.baseUrl}/data-saver/{self.attributes.hash}/{page}")
+		for page in atHomeServer.chapter.data:
+			output["data"].append(f"{atHomeServer.baseUrl}/data/{atHomeServer.chapter.hash}/{page}")
+		for page in atHomeServer.chapter.dataSaver:
+			output["dataSaver"].append(f"{atHomeServer.baseUrl}/data-saver/{atHomeServer.chapter.hash}/{page}")
 		return output
 
 class ChapterResult(Serializable):
