@@ -20,14 +20,16 @@ class TokenResponse(Serializable):
 		decoded = jwt.decode(self.session, verify=False)
 		if("exp" not in decoded):
 			return True
-		expires = datetime.fromtimestamp(decoded["exp"])
-		return datetime.utcnow() >= expires
+		expires = datetime.utcfromtimestamp(decoded["exp"])
+		
+		result = datetime.utcnow() >= expires
+		return result
 	def refreshExpired(self) -> bool:
 		#refresh tokens expire after 4 hours
 		decoded = jwt.decode(self.refresh, verify=False)
 		if("exp" not in decoded):
 			return True
-		expires = datetime.fromtimestamp(decoded["exp"])
+		expires = datetime.utcfromtimestamp(decoded["exp"])
 		return datetime.utcnow() >= expires
 
 class Settings(Serializable):
