@@ -240,9 +240,10 @@ class RequestTypes:
 		def __init__(self, chapterId:str, forcePort443:bool=False):
 			self.chapterId = chapterId
 			self.forcePort443 = forcePort443
-			self._get = lambda : MangaDexSdk.get(self.getPath())
-		def get(self):
-			result = AtHomeServer.fromJson(self._get().text)
+		def _get(self, api:MangaDexSdk) -> Response:
+			return api.getAuthenticated(self.getPath())
+		def get(self, api:MangaDexSdk) -> AtHomeServer:
+			result = AtHomeServer.fromJson(self._get(api).text)
 			result.setChapterId(self.chapterId)
 			return result
 		def getPath(self) -> str:
