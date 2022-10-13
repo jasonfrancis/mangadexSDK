@@ -17,7 +17,7 @@ class TokenResponse(Serializable):
 		self.tokensAssigned = datetime.utcnow().timestamp() if tokensAssigned == None else tokensAssigned
 	def tokenExpired(self) -> bool:
 		#tokens expire after 15 minutes
-		decoded = jwt.decode(self.session, verify=False)
+		decoded = jwt.decode(self.session, algorithms=["RS256"], options={"verify_signature": False})
 		if("exp" not in decoded):
 			return True
 		expires = datetime.utcfromtimestamp(decoded["exp"])
@@ -26,7 +26,7 @@ class TokenResponse(Serializable):
 		return result
 	def refreshExpired(self) -> bool:
 		#refresh tokens expire after 4 hours
-		decoded = jwt.decode(self.refresh, verify=False)
+		decoded = jwt.decode(jwt=self.refresh, algorithms=["RS256"], options={"verify_signature": False})
 		if("exp" not in decoded):
 			return True
 		expires = datetime.utcfromtimestamp(decoded["exp"])
