@@ -191,7 +191,7 @@ class RequestTypes:
 	class FeedRequest:
 		def __init__(self, path:str, limit:int = None, offset:int = None, locales:List[str] = None,
 					createdAtSince:datetime = None, updatedAtSince:datetime = None, publishAtSince:datetime = None,
-					order:ChapterOrder = None):
+					order:ChapterOrder = None, contentRating:List[str]=None):
 			limit = 100 if limit == None else limit
 			if(limit < 1 or limit > 500):
 				raise Exception(f"FeedRequest limit must be between 1 and 500. {limit} provided.")
@@ -205,6 +205,7 @@ class RequestTypes:
 			self.updatedAtSince = updatedAtSince
 			self.publishAtSince = publishAtSince
 			self.order = order
+			self.contentRating = contentRating
 
 			self._get:Response = lambda : MangaDexSdk.get(self.getPath())
 			self.get:FeedResult = lambda : FeedResult.fromJson(self._get().text)
@@ -215,13 +216,14 @@ class RequestTypes:
 			output += "" if not self.createdAtSince else f"&createdAtSince={BaseRequest.formatDatetime(self.createdAtSince)}"
 			output += "" if not self.updatedAtSince else f"&updatedAtSince={BaseRequest.formatDatetime(self.updatedAtSince)}"
 			output += "" if not self.publishAtSince else f"&publishAtSince={BaseRequest.formatDatetime(self.publishAtSince)}"
+			output += "" if not self.contentRating else BaseRequest.queryArrayOfStrings(self.contentRating, "contentRating")
 			output += "" if not self.order else self.order.toQueryString()
 			
 			return output
 
 	class UserFollowsMangaFeed(FeedRequest):
-		def __init__(self, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:ChapterOrder=None):
-			super().__init__("user/follows/manga/feed", limit=limit, offset=offset, locales=locales, createdAtSince=createdAtSince, updatedAtSince=updatedAtSince, publishAtSince=publishAtSince, order=order)
+		def __init__(self, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:ChapterOrder=None, contentRating:List[str]=None):
+			super().__init__("user/follows/manga/feed", limit=limit, offset=offset, locales=locales, createdAtSince=createdAtSince, updatedAtSince=updatedAtSince, publishAtSince=publishAtSince, order=order, contentRating=contentRating)
 			# User follows cannot use the anonymous get.
 			del self.get
 			del self._get
@@ -230,11 +232,11 @@ class RequestTypes:
 		def get(self, api:MangaDexSdk) -> FeedResult:
 			return FeedResult.fromJson(self._get(api).text)
 	class MangaFeed(FeedRequest):
-		def __init__(self, mangaId:str, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:ChapterOrder=None):
-			super().__init__(f"manga/{mangaId}/feed", limit=limit, offset=offset, locales=locales, createdAtSince=createdAtSince, updatedAtSince=updatedAtSince, publishAtSince=publishAtSince, order=order)
+		def __init__(self, mangaId:str, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:ChapterOrder=None, contentRating:List[str]=None):
+			super().__init__(f"manga/{mangaId}/feed", limit=limit, offset=offset, locales=locales, createdAtSince=createdAtSince, updatedAtSince=updatedAtSince, publishAtSince=publishAtSince, order=order, contentRating=contentRating)
 	class ListFeed(FeedRequest):
-		def __init__(self, listId:str, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:ChapterOrder=None):
-			super().__init__(f"list/{listId}/feed", limit=limit, offset=offset, locales=locales, createdAtSince=createdAtSince, updatedAtSince=updatedAtSince, publishAtSince=publishAtSince, order=order)
+		def __init__(self, listId:str, limit:int=None, offset:int=None, locales:List[str]=None, createdAtSince:datetime=None, updatedAtSince:datetime=None, publishAtSince:datetime=None, order:ChapterOrder=None, contentRating:List[str]=None):
+			super().__init__(f"list/{listId}/feed", limit=limit, offset=offset, locales=locales, createdAtSince=createdAtSince, updatedAtSince=updatedAtSince, publishAtSince=publishAtSince, order=order, contentRating=contentRating)
 
 	class AtHomeServer:
 		def __init__(self, chapterId:str, forcePort443:bool=False):
