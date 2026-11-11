@@ -1,14 +1,45 @@
 from datetime import datetime
-import json
-from typing import Any
+import logging
+from typing import Any, Optional
 from .serializable import Serializable, SerializableProperty
 from .constants import Constants
+from .errors import MangaDexHttpError
+from .httpClient import HttpClient
 from os import path
 import sys
 import keyring
 import getpass
 import requests
 import jwt
+
+log = logging.getLogger("mangadexSdk")
+
+# Module-level singleton HttpClient. All classmethod shims on MangaDexSdk
+# delegate to this so anonymous (non-instantiated) usage keeps working while
+# still benefiting from shared rate-limit state, connection pooling, and the
+# retry/backoff policy.
+_default_client: Optional[HttpClient] = None
+
+
+def get_default_client() -> HttpClient:
+	"""Return the process-wide shared ``HttpClient``.
+
+	The first call constructs one with SDK defaults; subsequent calls return
+	the same instance so rate-limit buckets are honored across every request
+	the SDK makes.
+	"""
+	global _default_client
+	if _default_client is None:
+		_default_client = HttpClient()
+	return _default_client
+
+
+def set_default_client(client: HttpClient) -> None:
+	"""Replace the process-wide shared ``HttpClient``. Useful for tests and
+	for power users who want to tune retry/backoff behavior globally."""
+	global _default_client
+	_default_client = client
+
 
 class TokenResponse(Serializable):
 	def __init__(self, session:str = None, refresh:str = None, tokensAssigned:float = None):
@@ -42,27 +73,27 @@ class Settings(Serializable):
 	@staticmethod
 	def getSettings():
 		if(path.exists(Constants.SETTINGS_FILE)):
-			print(f"{Constants.SETTINGS_FILE} exists")
+			log.info("%s exists", Constants.SETTINGS_FILE)
 			settings = Settings.readFromFile()
 			if(not settings.username):
-				print("Username not found in settings file.")
+				log.info("Username not found in settings file.")
 				settings.setUsername()
 			return settings
 		else:
-			print(f"{Constants.SETTINGS_FILE} does not exist")
+			log.info("%s does not exist", Constants.SETTINGS_FILE)
 			settings = Settings()
 			settings.setUsername()
 			return settings
 	
 	def setUsername(self):
 		self.username = input("Enter your MangaDex username: ")
-		print(f"Saving username \"{self.username}\" to {Constants.SETTINGS_FILE} ...")
+		log.info("Saving username \"%s\" to %s ...", self.username, Constants.SETTINGS_FILE)
 		self.writeToFile()
-		print("Done.")
+		log.info("Done.")
 
 	def updateSession(self, token:TokenResponse):
 		self.token = token
-		print("Writing updated token to settings")
+		log.info("Writing updated token to settings")
 		self.writeToFile()
 
 	def writeToFile(self):
@@ -74,8 +105,6 @@ class Settings(Serializable):
 	def readFromFile():
 		with open(Constants.SETTINGS_FILE, "r") as reader:
 			settingsString = reader.read()
-			#settingsDict = json.loads(settingsString, object_hook=Settings.dafuq)
-			#return Settings(**settingsDict)
 			return Settings.fromJson(settingsString)
 
 class Credentials:
@@ -89,7 +118,7 @@ class Credentials:
 		self.password = keyring.get_password(Constants.SERVICE_ID, self.username)
 
 		if(not self.password):
-			print(f"Password for user \"{self.username}\" not found in the keyring.  Enter password.")
+			log.info("Password for user \"%s\" not found in the keyring.  Enter password.", self.username)
 			self.setPassword()
 	
 	def setPassword(self):
@@ -105,29 +134,29 @@ class MangaDexSdk:
 		self.settings = Settings.getSettings()
 		self.credentials = Credentials(self.settings)
 		self.session = Session(self.settings, self.credentials)
+
 	@classmethod
 	def postJson(cls, path:str, content:Any) -> requests.Response:
-		url = f"{Constants.BASE_URI}/{path}"
-		contentJson = contentJson = json.dumps(content)
-		headers = { "Content-Type": "application/json;charset=utf-8" }
-		resp = requests.post(url, contentJson, headers=headers)
-		if(resp.status_code != 200):
-			raise Exception(f"MangaDexApi.postJson to {url} failed. Status code {resp.status_code} - {resp.text}")
-		return resp
+		"""POST ``content`` as JSON to ``path``. Delegates to the shared
+		``HttpClient`` singleton so rate-limit buckets and retries are
+		honored.
+
+		Raises ``MangaDexHttpError`` (or a subclass such as
+		``MangaDexRateLimitError`` / ``MangaDexAuthError``) on failure.
+		"""
+		return get_default_client().post_json(path, content)
+
 	@classmethod
-	def get(self, path:str):
-		url = f"{Constants.BASE_URI}/{path}"
-		resp = requests.get(url)
-		if(resp.status_code != 200):
-			raise Exception(f"MangaDexApi.get from {url} failed. Status code {resp.status_code} - {resp.text}")
-		return resp
-	def getAuthenticated(self, path:str):
-		url = f"{Constants.BASE_URI}/{path}"
+	def get(cls, path:str) -> requests.Response:
+		"""GET ``path``. Delegates to the shared ``HttpClient`` singleton.
+
+		Raises ``MangaDexHttpError`` (or a subclass) on failure.
+		"""
+		return get_default_client().get(path)
+
+	def getAuthenticated(self, path:str) -> requests.Response:
 		headers = { "Authorization": f"Bearer {self.session.getBearerToken()}"}
-		resp = requests.get(url, headers=headers)
-		if(resp.status_code != 200):
-			raise Exception(f"MangaDexApi.getAuthenticated from {url} failed. Status code {resp.status_code} - {resp.text}")
-		return resp
+		return get_default_client().get(path, headers=headers)
 
 
 
@@ -148,7 +177,7 @@ class Session:
 		if(self.settings.token == None or self.settings.token.refreshExpired()):
 			self.login()
 		elif(self.settings.token.tokenExpired()):
-			print("Token has expired, attempting to refresh.")
+			log.info("Token has expired, attempting to refresh.")
 			self.refresh()
 		return self.settings.token.session
 		
