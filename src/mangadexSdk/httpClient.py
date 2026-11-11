@@ -40,21 +40,22 @@ from .errors import (
 log = logging.getLogger("mangadexSdk.http")
 
 
-# Path families that have their own tighter per-endpoint rate-limit bucket on
-# MangaDex. Everything else shares the global ~5 req/s bucket.
-_BUCKET_RULES = (
-	("auth/login", "auth/login"),
-	("auth/refresh", "auth/refresh"),
-	("at-home/server", "at-home/server"),
+# Path prefixes that have their own tighter per-endpoint rate-limit bucket on
+# MangaDex. The prefix is also the bucket key. Everything else shares the
+# global ~5 req/s bucket.
+_BUCKET_PREFIXES = (
+	"auth/login",
+	"auth/refresh",
+	"at-home/server",
 )
 
 
 def _bucket_key(path: str) -> str:
 	# Strip leading slash and query string for matching.
 	clean = path.lstrip("/").split("?", 1)[0]
-	for prefix, key in _BUCKET_RULES:
+	for prefix in _BUCKET_PREFIXES:
 		if clean == prefix or clean.startswith(prefix + "/"):
-			return key
+			return prefix
 	return "global"
 
 
