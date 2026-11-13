@@ -84,3 +84,22 @@ Writing updated token to settings
 Got 100 of 1001 chapters.
 ```
 If you need to change your stored username or password you can run your script with the `--update-username` or `--update-password` flags. Or you can directly invoke the `mangaDex.Settings.setUsername()` and `MangaDexSdk.deletePassword()` methods.
+
+## Rate limiting & retries
+The SDK honors MangaDex's `Retry-After` and `X-RateLimit-*` response headers, waits out exhausted buckets before firing the next request, and falls back to capped exponential backoff on `5xx` / network errors. Non-retryable `4xx` responses raise immediately.
+
+To tune the defaults, replace the shared `HttpClient`:
+```python
+from mangadexSdk import HttpClient, set_default_client
+
+set_default_client(HttpClient(
+    user_agent="my-app/1.0 (+https://example.com)",  # default: mangadexSdk/<version>
+    max_retries=5,          # retries per request
+    max_sleep=60.0,         # ceiling (s); above this raises MangaDexRateLimitError
+    backoff_base=1.0,       # exponential backoff base (s)
+    backoff_cap=30.0,       # exponential backoff cap (s)
+    jitter=0.25,            # max random jitter added to any sleep (s)
+))
+```
+
+Errors to catch: `MangaDexRateLimitError`, `MangaDexAuthError`, `MangaDexNetworkError`, `MangaDexHttpError` (all subclass `MangaDexApiError`, which subclasses `Exception`).
